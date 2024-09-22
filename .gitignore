@@ -1,0 +1,15 @@
+# Ignore Visual Studio Files
+.vs/
+*.sln
+*.vcxproj
+*.user
+*.filters
+
+
+# Ignore build output directories
+temp/
+
+
+# Ignore jetBrains IDE files 
+.idea/
+
