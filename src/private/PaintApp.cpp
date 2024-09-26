@@ -30,10 +30,16 @@ PaintApp::PaintApp()
 	m_selectedTool = eToolType::PencilTool;
 	isDrawing = false;
 	m_clearColor = std::make_unique<Color>(0.12);
+	m_frameCount = 0;
+	m_lastTime = glfwGetTime();
 }
 
 PaintApp::~PaintApp()
 {
+	for (auto button : m_Buttons)
+		delete button;
+	m_Buttons.clear();
+
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }
@@ -93,7 +99,7 @@ void PaintApp::getPlayerInput()
 		m_selectedTool = eToolType::PencilTool;
 		std::cout << "Selected Pencil Tool\n";
 	}
-	if (Input::isButtonDown(Key::O))
+	if (Input::isButtonDown(Key::BACKSPACE))
 	{
 		m_selectedTool = eToolType::EraserTool;
 		std::cout << "Selected Eraser Tool\n";
@@ -113,23 +119,29 @@ void PaintApp::getPlayerInput()
 		m_selectedTool = eToolType::BucketTool;
 		std::cout << "Selected Bucket Tool\n";
 	}
+	if (Input::isButtonDown(Key::O))
+	{
+		m_selectedTool = eToolType::CircleTool;
+		std::cout << "Selected Circle Tool\n";
+	}
 
 	if (Input::isButtonDown(Key::ARROW_UP))
 	{
 		m_brushSize += 1.0;
-		m_brushSize = clamp(m_brushSize, 1, 20);
+		m_brushSize = clamp(m_brushSize, 1, 40);
 	}
 
 	if (Input::isButtonDown(Key::ARROW_DOWN))
 	{
 		m_brushSize -= 1.0;
-		m_brushSize = clamp(m_brushSize, 1, 20);
+		m_brushSize = clamp(m_brushSize, 1, 40);
 	}
 
 	if (Input::isButtonPressed(Key::CTRL) && Input::isButtonDown(Key::Z))
 	{
 		std::cout << "Undo Called\n";
-		m_linesToDraw.pop_back();
+		if(!m_linesToDraw.empty())
+			m_linesToDraw.pop_back();
 	}
 
 	// Change color with number keys
@@ -201,12 +213,13 @@ void PaintApp::getPlayerInput()
 
 	if (Input::isButtonPressed(Key::MOUSE_LEFT))
 	{
+		checkIfButtonClicked();
 		isDrawing = true;
 		if (m_selectedTool == eToolType::PencilTool || m_selectedTool == eToolType::EraserTool)
 		{
 			m_points.push_back(getMousePos());
 		}
-		else if (m_selectedTool == eToolType::LineTool)
+		else if (m_selectedTool == eToolType::LineTool || m_selectedTool == eToolType::CircleTool)
 		{
 			if (m_points.empty())
 			{
@@ -225,10 +238,9 @@ void PaintApp::getPlayerInput()
 			{
 				auto [x1, y1] = getMousePos();
 				m_points.push_back({ x1, y1 });
-				auto [x2, y2] = getMousePos();
-				m_points.push_back({ x1, y2 });
-				m_points.push_back({ x2, y2 });
-				m_points.push_back({ x2, y1 });
+				m_points.push_back({ x1, y1 });
+				m_points.push_back({ x1, y1 });
+				m_points.push_back({ x1, y1 });
 				m_points.resize(4);
 			}
 			else
@@ -307,6 +319,22 @@ void PaintApp::getPlayerInput()
 				});
 			m_points.clear();
 		}
+		else if (m_selectedTool == eToolType::CircleTool)
+		{
+			auto center = m_points[0];
+			float tempSize = m_brushSize;
+			eColor tempclr = m_selectedColor;
+			if (m_points[0] != m_points[1])
+			{
+				float dist = getDistance(m_points[0], m_points[1]);
+
+				m_linesToDraw.push_back([center, dist, tempSize, tempclr, this]()
+					{
+						circleTool(center, dist, tempSize, tempclr);
+					});
+				m_points.clear();
+			}
+		}
 	}
 }
 
@@ -314,10 +342,13 @@ void PaintApp::run()
 {
 	if (!m_window)
 		return;
+
+	createButtons();
 	
 	while (!glfwWindowShouldClose(m_window))
 	{
 		canFill = true;
+		showFPS();
 		getPlayerInput();
 
 		glfwPollEvents();
@@ -351,9 +382,13 @@ void PaintApp::run()
 		{
 			fillTool(m_points, m_selectedColor);
 		}
+		else if (m_selectedTool == eToolType::CircleTool && m_points.size() == 2)
+		{
+			circleTool(m_points[0], getDistance(m_points[0], m_points[1]), m_brushSize, m_selectedColor);
+		}
 
 		drawBorder();
-		
+		drawButtons();
 		glfwSwapBuffers(m_window);
 	}
 }
@@ -398,9 +433,73 @@ std::pair<float, float> PaintApp::getMappedPos(std::pair<float, float> pair)
 	return { x, y };
 }
 
+float PaintApp::getDistance(const std::pair<float, float> a, const std::pair<float, float> b)
+{
+	float x = a.first - b.first;
+	float y = a.second - b.second;
+	return std::sqrt(x * x + y * y);
+}
+
 bool PaintApp::isValueSame(const float& a, const float& b, float epsilon)
 {
 	return (fabs(a - b) < epsilon);
+}
+
+void PaintApp::showFPS()
+{
+	double currentTime = glfwGetTime();
+	double delta = currentTime - m_lastTime;
+	m_frameCount++;
+	if (delta >= 1.0)
+	{
+		double fps = double(m_frameCount) / delta;
+
+		std::stringstream ss;
+		ss << "Paint App " << "[" << fps << " FPS]";
+
+		glfwSetWindowTitle(m_window, ss.str().c_str());
+
+		m_frameCount = 0;
+		m_lastTime = currentTime;
+	}
+
+}
+
+void PaintApp::createButtons()
+{
+	float buttonWidth = 0.05f;
+	float buttonHeight = 0.05f;
+	float xStart = 0.825f;  // X position for the first column
+	float yStart = 0.8f;        // Starting Y position for the top of the buttons
+	float yOffset = 0.01f;       // Vertical offset between buttons
+	float xOffset = 0.01f;       // Vertical offset between buttons
+
+	for (int i = 0; i < MAX_COLOR; ++i)
+	{
+		float xPos = xStart + (buttonWidth + xOffset) * (i % 2);
+		float yPos = yStart - (buttonHeight + yOffset) * (i / 2);
+		UiButton* button = new UiButton(xPos, yPos, xPos + buttonWidth, yPos - buttonHeight, (eColor)i, [this, i]() {
+			m_selectedColor = (eColor)i;
+			});
+		m_Buttons.push_back(button);
+	}
+}
+
+void PaintApp::drawButtons()
+{
+	for (const auto button : m_Buttons)
+	{
+		button->Draw();
+	}
+}
+
+void PaintApp::checkIfButtonClicked()
+{
+	auto [x, y] = getMousePos();
+	for (const auto button : m_Buttons)
+	{
+		button->isClicked(x, y);
+	}
 }
 
 void PaintApp::pencilTool(const std::vector<std::pair<float, float>>& points,const float brushSize, eColor clr)
@@ -474,6 +573,27 @@ void PaintApp::fillTool(const std::vector<std::pair<float, float>>& points, eCol
 
 	for (const auto& pos : points)
 		glVertex2f(pos.first, pos.second);
+
+	glEnd();
+}
+
+void PaintApp::circleTool(const std::pair<float, float> center, float radius, const float brushSize, eColor clr)
+{
+	if (radius <= 0) return; 
+	const Color color = std::move(getColorFromEnum(clr));
+	glColor3f(color.r, color.g, color.b);
+
+	glLineWidth(brushSize);
+	glBegin(GL_LINE_LOOP);
+
+	int numSegments = 100;  
+	for (int i = 0; i < numSegments; i++)
+	{
+		float angle = 2.0f * 3.14159f * float(i) / float(numSegments); 
+		float x = radius * cos(angle);
+		float y = radius * sin(angle);
+		glVertex2f(center.first + x, center.second + y);
+	}
 
 	glEnd();
 }
