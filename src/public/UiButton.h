@@ -8,11 +8,17 @@
 class UiButton
 {
 public:
-	UiButton(float a1, float a2, float b1, float b2, eColor color, std::function<void()> onClickEvent);
+	UiButton(float x, float y, float sizeX, float sizeY, eColor color, std::function<void()> onClickEvent);
 	
-	float x1, y1, x2, y2;
-	Color clr;
 	std::function<void()> onButtonClick;
-	void Draw();
+	virtual void Draw();
 	void isClicked(const float posX, const float posY);
+	void selectedValue(const Color& clr);
+protected:
+	Color m_clr;
+	float m_x, m_y, m_width, m_height;
+	bool isSelected;
+
+private:
+	void DrawSelectUI();
 };

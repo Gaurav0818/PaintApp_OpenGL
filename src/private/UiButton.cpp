@@ -1,33 +1,63 @@
 #include "UiButton.h"
 
-UiButton::UiButton(float a1, float b1, float a2, float b2, eColor color, std::function<void()> onClickEvent)
+UiButton::UiButton(float x, float y, float sizeX, float sizeY, eColor color, std::function<void()> onClickEvent)
 {
-	 x1 = a1;
-	 y1 = b1;
+	 m_x = x;
+	 m_y = y;
 
-	 x2 = a2;
-	 y2 = b2;
-	 clr = Color();
-	 clr = std::move(getColorFromEnum(color));;
+	 m_width = sizeX;
+	 m_height = sizeY;
+	 m_clr = Color();
+	 m_clr = std::move(getColorFromEnum(color));
 	 onButtonClick = std::move(onClickEvent);
+
+	 isSelected = false;
 }
 
 void UiButton::Draw()
 {
-	glColor3f(clr.r, clr.g, clr.b);
+	glColor3f(m_clr.r, m_clr.g, m_clr.b);
 	glBegin(GL_POLYGON);
 
-	glVertex2f(x1, y1);
-	glVertex2f(x1, y2);
-	glVertex2f(x2, y2);
-	glVertex2f(x2, y1);
+	glVertex2f(m_x, m_y);
+	glVertex2f(m_x, m_y + m_height);
+	glVertex2f(m_x + m_width, m_y + m_height);
+	glVertex2f(m_x + m_width, m_y);
 
 	glEnd();
+
+	if (isSelected)
+		DrawSelectUI();
+
 }
 
 void UiButton::isClicked(const float posX, const float posY)
 {
-	if (posX >= std::min(x1, x2) && posX <= std::max(x1, x2) && 
-		posY >= std::min(y1, y2) && posY <= std::max(y1, y2))
+	if (posX >= std::min(m_x, m_x + m_width) && posX <= std::max(m_x, m_x + m_width) &&
+		posY >= std::min(m_y, m_y + m_height) && posY <= std::max(m_y, m_y + m_height))
+	{
 		onButtonClick();
+		isSelected = true;
+	}
+	else
+		isSelected = false;
+}
+
+void UiButton::DrawSelectUI()
+{
+	glPushMatrix();
+	glTranslatef(m_x + m_width / 2, m_y + m_height / 2, 0);
+	glScalef(0.55, 0.55, 0.55);
+
+	glLineWidth(4);
+	glColor3f(0, 0, 0);
+
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(-m_width, +m_height);    // Top-left corner
+	glVertex2f(-m_width, -m_height);   // Bottom-left corner
+	glVertex2f(+m_width, -m_height);    // Bottom-right corner
+	glVertex2f(+m_width, +m_height);     // Top-right corner
+	glEnd();
+	
+	glPopMatrix();
 }

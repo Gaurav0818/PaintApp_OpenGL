@@ -13,6 +13,7 @@
 #include "Input.h"
 #include "Color.h"
 #include "UiButton.h"
+#include "IconButton.h"
 
 struct pair_hash
 {
@@ -21,16 +22,6 @@ struct pair_hash
 	{
 		return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
 	}
-};
-
-enum eToolType
-{
-	PencilTool,
-	EraserTool,
-	LineTool,
-	RectTool,
-	BucketTool,
-	CircleTool
 };
 
 class PaintApp

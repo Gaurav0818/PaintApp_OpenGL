@@ -467,22 +467,79 @@ void PaintApp::showFPS()
 
 void PaintApp::createButtons()
 {
+	// Color Buttons 
 	float buttonWidth = 0.05f;
 	float buttonHeight = 0.05f;
-	float xStart = 0.825f;  // X position for the first column
-	float yStart = 0.8f;        // Starting Y position for the top of the buttons
-	float yOffset = 0.01f;       // Vertical offset between buttons
-	float xOffset = 0.01f;       // Vertical offset between buttons
+	float xStart = 0.825f;		
+	float yStart = 0.5f;        
+	float yOffset = 0.01f;      
+	float xOffset = 0.01f;      
+
+	float xPos;
+	float yPos;
 
 	for (int i = 0; i < MAX_COLOR; ++i)
 	{
-		float xPos = xStart + (buttonWidth + xOffset) * (i % 2);
-		float yPos = yStart - (buttonHeight + yOffset) * (i / 2);
-		UiButton* button = new UiButton(xPos, yPos, xPos + buttonWidth, yPos - buttonHeight, (eColor)i, [this, i]() {
+		xPos = xStart + (buttonWidth + xOffset) * (i % 2);
+		yPos = yStart - (buttonHeight + yOffset) * (i / 2);
+
+		UiButton* button = new UiButton(xPos, yPos, buttonWidth, buttonHeight, (eColor)i, [this, i]() {
 			m_selectedColor = (eColor)i;
 			});
 		m_Buttons.push_back(button);
 	}
+
+	//Icons 
+	int i = 0;
+	xStart = -0.95f;
+	yStart = 0.5f;
+	yOffset = 0.05f;      
+	buttonWidth = 0.1f;
+	buttonHeight = 0.1f;
+	xPos = xStart ;
+	yPos = yStart - (buttonHeight + yOffset) * (i);
+	UiButton* brushButton = (UiButton*)new IconButton(xPos, yPos, buttonWidth, buttonHeight, eColor::White, [this]() {
+		std::cout << "PencilTool selected!" << std::endl;
+		m_selectedTool = eToolType::PencilTool;
+		}, eToolType::PencilTool);
+	m_Buttons.push_back(brushButton);
+	
+	i++;
+	yPos = yStart - (buttonHeight + yOffset) * (i);
+	UiButton* LineButton = (UiButton*)new IconButton(xPos, yPos, buttonWidth, buttonHeight, eColor::White, [this]() {
+		std::cout << "LineTool selected!" << std::endl;
+		m_selectedTool = eToolType::LineTool;
+		}, eToolType::LineTool);
+	m_Buttons.push_back(LineButton);
+	
+	i++;
+	yPos = yStart - (buttonHeight + yOffset) * (i);
+	// Eraser button
+	UiButton* eraserButton = (UiButton*)new IconButton(xPos, yPos, buttonWidth, buttonHeight, eColor::White, [this]() {
+		std::cout << "Eraser selected!" << std::endl;
+		m_selectedTool = eToolType::EraserTool;
+		}, eToolType::EraserTool);
+	m_Buttons.push_back(eraserButton);
+	
+	i++;
+	yPos = yStart - (buttonHeight + yOffset) * (i);
+	// Paint bucket button
+	UiButton* bucketButton = (UiButton*)new IconButton(xPos, yPos, buttonWidth, buttonHeight, eColor::White, [this]() {
+		std::cout << "Bucket selected!" << std::endl;
+		m_selectedTool = eToolType::BucketTool;
+		}, eToolType::BucketTool);
+	
+	m_Buttons.push_back(bucketButton);
+	
+	i++;
+	yPos = yStart - (buttonHeight + yOffset) * (i);
+	// Rectangle button
+	UiButton* rectangleButton = (UiButton*)new IconButton(xPos, yPos, buttonWidth, buttonHeight, eColor::White, [this]() {
+		std::cout << "Rectangle selected!" << std::endl;
+		m_selectedTool = eToolType::RectTool;
+		}, eToolType::RectTool);
+	m_Buttons.push_back(rectangleButton);
+
 }
 
 void PaintApp::drawButtons()
